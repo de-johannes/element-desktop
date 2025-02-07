@@ -1,4 +1,4 @@
-name: Build MSI for Element Desktop
+name: Build MSI for Element Desktop using WiX
 
 on:
   workflow_dispatch:
@@ -50,8 +50,14 @@ jobs:
             rustup default stable
             rustup target add x86_64-pc-windows-msvc
 
-      - name: Install Dependencies
-        run: yarn install --frozen-lockfile
+      - name: Modify package.json for WiX MSI
+        run: |
+            cat package.json | jq '(.config.forge.makers // []) += [{"name": "@electron-forge/maker-wix", "config": {"language": 1031, "manufacturer": "Element Inc.", "perMachine": true, "shortcutFolderName": "Element", "outputDirectory": "out"}}] | unique' > package.json.tmp && mv package.json.tmp package.json
+
+      - name: Install Electron Forge and WiX Maker
+        run: |
+          yarn add --dev @electron-forge/cli @electron-forge/maker-wix
+          yarn electron-forge import
 
       - name: Build Native Modules
         if: steps.cache.outputs.cache-hit != 'true'
@@ -66,12 +72,12 @@ jobs:
       - name: Build WebApp
         run: yarn run asar-webapp
 
-      - name: Build MSI
-        run: yarn electron-builder --win msi --publish never
+      - name: Build MSI with WiX
+        run: yarn electron-forge make --target=msi
 
       - name: Upload MSI Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ElementDesktop-MSI
-          path: dist/*.msi
+          path: out/*.msi
           retention-days: 7
