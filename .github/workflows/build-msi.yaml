@@ -52,7 +52,7 @@ jobs:
 
       - name: Modify package.json for WiX MSI
         run: |
-            cat package.json | jq '(.config.forge.makers // []) += [{"name": "@electron-forge/maker-wix", "config": {"language": 1031, "manufacturer": "Element Inc.", "perMachine": true, "shortcutFolderName": "Element", "outputDirectory": "out"}}] | unique' > package.json.tmp && mv package.json.tmp package.json
+            cat package.json | jq 'if .config == null then .config = {} else . end | if .config.forge == null then .config.forge = {"makers": []} else . end | if (.config.forge.makers | map(.name == "@electron-forge/maker-wix") | any) | not then .config.forge.makers += [{"name": "@electron-forge/maker-wix", "config": {"language": 1031, "manufacturer": "Element Inc.", "perMachine": true, "shortcutFolderName": "Element", "outputDirectory": "out"}}] else . end' > package.json.tmp && mv package.json.tmp package.json
 
       - name: Install Electron Forge and WiX Maker
         run: |
