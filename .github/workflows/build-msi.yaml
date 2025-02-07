@@ -63,10 +63,8 @@ jobs:
       - name: Copy resources
         run: yarn run build:res
 
-      - name: Fetch WebApp
-        uses: actions/download-artifact@v4
-        with:
-          name: webapp
+      - name: Build WebApp
+        run: yarn run build:web
 
       - name: Build MSI
         run: yarn electron-builder --win msi --publish never
