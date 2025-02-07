@@ -1,0 +1,31 @@
+name: Build MSI for Element Desktop
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-msi:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "yarn"
+
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build MSI
+        run: yarn electron-builder --win msi --publish never
+
+      - name: Upload MSI Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ElementDesktop-MSI
+          path: dist/*.msi
+          retention-days: 7
