@@ -20,6 +20,37 @@ jobs:
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Cache .hak
+        id: cache
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-msi-${{ hashFiles('hakHash', 'electronVersion') }}
+          path: |
+              ./.hak
+
+      - name: Set up build tools
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Rust
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+            rustup toolchain install stable --profile minimal --no-self-update
+            rustup default stable
+            rustup target add x86_64-pc-windows-msvc
+
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build Native Modules
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: yarn build:native
+
+      - name: Compile TypeScript
+        run: yarn run build:ts
+
+      - name: Copy resources
+        run: yarn run build:res
+
       - name: Build MSI
         run: yarn electron-builder --win msi --publish never
 
