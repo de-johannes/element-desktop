@@ -31,6 +31,18 @@ jobs:
       - name: Set up build tools
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Install NetWide Assembler (NASM)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+            choco install -y nasm --no-progress
+            echo "C:/Program Files/NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Install Tcl/Tk (for hak)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+            choco install -y magicsplat-tcl-tk --no-progress
+            echo "${HOME}/AppData/Local/Apps/Tcl86/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
       - name: Install Rust
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
@@ -50,6 +62,11 @@ jobs:
 
       - name: Copy resources
         run: yarn run build:res
+
+      - name: Fetch WebApp
+        uses: actions/download-artifact@v4
+        with:
+          name: webapp
 
       - name: Build MSI
         run: yarn electron-builder --win msi --publish never
