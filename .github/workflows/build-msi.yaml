@@ -64,7 +64,7 @@ jobs:
         run: yarn run build:res
 
       - name: Build WebApp
-        run: yarn run build:web
+        run: yarn run asar-webapp
 
       - name: Build MSI
         run: yarn electron-builder --win msi --publish never
