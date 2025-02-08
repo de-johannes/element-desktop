@@ -79,5 +79,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ElementDesktop-MSI
-          path: out/make/*.msi
+          path: D:\a\element-desktop\element-desktop\out\make\*.msi
           retention-days: 7
