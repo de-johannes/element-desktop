@@ -20,13 +20,22 @@ jobs:
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Fetch Element Web (verhindert unnötige Dateien)
+        run: yarn run fetch --noverify -d ""
+
       - name: Cache .hak
         id: cache
         uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-msi-${{ hashFiles('hakHash', 'electronVersion') }}
-          path: |
-              ./.hak
+          path: ./.hak
+
+      - name: Generate cache hash files
+        run: |
+          yarn run --silent electron --no-sandbox --version > electronVersion
+          cat package.json | jq -c .hakDependencies | sha1sum > hakHash
+          find hak -type f -print0 | xargs -0 sha1sum >> hakHash
+          find scripts/hak -type f -print0 | xargs -0 sha1sum >> hakHash
 
       - name: Set up build tools
         uses: ilammy/msvc-dev-cmd@v1
@@ -34,25 +43,25 @@ jobs:
       - name: Install NetWide Assembler (NASM)
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-            choco install -y nasm --no-progress
-            echo "C:/Program Files/NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          choco install -y nasm --no-progress
+          echo "C:/Program Files/NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Install Tcl/Tk (for hak)
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-            choco install -y magicsplat-tcl-tk --no-progress
-            echo "${HOME}/AppData/Local/Apps/Tcl86/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          choco install -y magicsplat-tcl-tk --no-progress
+          echo "${HOME}/AppData/Local/Apps/Tcl86/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Install Rust
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-            rustup toolchain install stable --profile minimal --no-self-update
-            rustup default stable
-            rustup target add x86_64-pc-windows-msvc
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup default stable
+          rustup target add x86_64-pc-windows-msvc
 
       - name: Modify package.json for WiX MSI
         run: |
-            cat package.json | jq 'if .config == null then .config = {} else . end | if .config.forge == null then .config.forge = {"makers": []} else . end | if (.config.forge.makers | map(.name == "@electron-forge/maker-wix") | any) | not then .config.forge.makers += [{"name": "@electron-forge/maker-wix", "config": {"language": 1031, "manufacturer": "Element Inc.", "perMachine": true, "shortcutFolderName": "Element", "outputDirectory": "out"}}] else . end' > package.json.tmp && mv -Force package.json.tmp package.json
+          cat package.json | jq 'if .config == null then .config = {} else . end | if .config.forge == null then .config.forge = {"makers": []} else . end | if (.config.forge.makers | map(.name == "@electron-forge/maker-wix") | any) | not then .config.forge.makers += [{"name": "@electron-forge/maker-wix", "config": {"language": 1031, "manufacturer": "Element Inc.", "perMachine": true, "shortcutFolderName": "Element", "outputDirectory": "out"}}] else . end' > package.json.tmp && mv -Force package.json.tmp package.json
 
       - name: Install Electron Forge and WiX Maker
         run: |
@@ -69,11 +78,11 @@ jobs:
       - name: Copy resources
         run: yarn run build:res
 
-      - name: Build WebApp
+      - name: Build WebApp (asar optimiert für kleinere MSI)
         run: yarn run asar-webapp
 
-      - name: Build MSI with WiX
-        run: yarn electron-forge make --target=msi
+      - name: Build MSI with WiX (nur x64)
+        run: yarn electron-forge make --target=msi --arch=x64
 
       - name: Upload MSI Artifact
         uses: actions/upload-artifact@v4
